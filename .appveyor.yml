@@ -1,0 +1,82 @@
+# Notes:
+# - Minimal appveyor.yml file is an empty file. All sections are optional.
+# - Indent each level of configuration with 2 spaces. Do not use tabs!
+# - All section names are case-sensitive.
+# - Section names should be unique on each level.
+
+#---------------------------------#
+#  general configuration          #
+#---------------------------------#
+
+# version format
+version: '{branch}-{build}'
+
+# Do not build on tags (GitHub only)
+skip_tags: true
+
+# manual mode
+branches:
+  except:
+    - /.*/
+
+
+#---------------------------------#
+#  environment configuration      #
+#---------------------------------#
+
+# environment variables
+# build system info: https://www.appveyor.com/docs/build-environment/#pre-installed-software
+os: Visual Studio 2017
+
+environment:
+  REPO_DIR: &REPO_DIR c:\project  # directory created by appveyor
+
+  SOL_FILE: nppAutoDetectIndent.sln
+  MSBUILD_CMD_X86: /maxcpucount /property:Configuration=Release,Platform=x86
+  MSBUILD_CMD_X64: /maxcpucount /property:Configuration=Release,Platform=x64
+
+# clone directory
+clone_folder: *REPO_DIR
+
+
+#---------------------------------#
+#  build configuration            #
+#---------------------------------#
+
+# scripts to run before build
+before_build:
+  - cd "%REPO_DIR%"
+  - git submodule update --init --remote --recursive --jobs 4 --depth 1
+
+# to run your custom scripts instead of automatic MSBuild
+build_script:
+  - cd "%REPO_DIR%\src"
+  - msbuild %SOL_FILE% %MSBUILD_CMD_X86%
+  - msbuild %SOL_FILE% %MSBUILD_CMD_X64%
+
+# scripts to run before deployment
+after_build:
+  - cd "%REPO_DIR%"
+  - mkdir "x86" "x64"
+  - copy "src\Release\nppAutoDetectIndent.dll" "x86"
+  - copy "src\x64\Release\nppAutoDetectIndent.dll" "x64"
+  - 7z a -mx9 "nppAutoDetectIndent.7z" "x86" "x64"
+  - 'powershell -Command "& { $hash = (Get-FileHash -Algorithm SHA1 "nppAutoDetectIndent.7z").hash.ToString().toLower(); Write-Host $hash " *nppAutoDetectIndent.7z"; }" > "nppAutoDetectIndent.7z.sha1"'
+
+#---------------------------------#
+#  tests configuration            #
+#---------------------------------#
+
+# to disable automatic tests
+test: off
+
+
+#---------------------------------#
+#  artifacts configuration        #
+#---------------------------------#
+
+artifacts:
+  - path: nppAutoDetectIndent.7z
+    name: plugin
+  - path: nppAutoDetectIndent.7z.sha1
+    name: checksum

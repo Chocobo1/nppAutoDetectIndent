@@ -1,0 +1,3 @@
+[submodule "plugintemplate"]
+	path = plugintemplate
+	url = https://github.com/npp-plugins/plugintemplate.git
