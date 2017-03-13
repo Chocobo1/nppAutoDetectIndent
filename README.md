@@ -7,7 +7,7 @@ Detects indention (tab or spaces) and auto adjust <kbd>Tab</kbd> key on-the-fly
 | Indention used in file | <kbd>Tab</kbd> key            |
 | ---------------------- | ----------------------------- |
 | Tabs                   | 1 tab                         |
-| Spaces                 | spaces                        |
+| For example: 3 Spaces  | 3 spaces                      |
 | Cannot determine       | Depends on Notepad++ settings |
 
 ## Installation
