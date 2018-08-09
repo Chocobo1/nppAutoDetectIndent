@@ -1,239 +1,290 @@
+/*
+*  Chocobo1/nppAutoDetectIndent
+*
+*   Copyright 2017-2018 by Mike Tzou (Chocobo1)
+*     https://github.com/Chocobo1/nppAutoDetectIndent
+*
+*   Licensed under GNU General Public License 3 or later.
+*
+*  @license GPL3 <https://www.gnu.org/licenses/gpl-3.0-standalone.html>
+*/
+
 #include "stdafx.h"
 #include "nppAutoDetectIndent.h"
 
 #include <algorithm>
-#include <cassert>
-#include <type_traits>
+#include <stdexcept>
 
 #include <Shellapi.h>
 #include <Strsafe.h>
 
+#include "settings.h"
 
-#define PLUGIN_VERSION "1.0"
+#define PLUGIN_VERSION "1.1"
 
-static const int MAX_LINES = 5000;
-extern MyPlugin plugin;
+namespace
+{
+	const int MAX_LINES = 5000;
+	const int MAX_INDENTS = (80 * 2 / 3) + 1;  // 2/3 of 80-width screen
 
+	struct ParseResult
+	{
+		int tabCount = 0;
+		int spaceTotal = 0;
+		std::array<int, MAX_INDENTS> spaceCount {};
+	};
+
+	ParseResult parseDocument()
+	{
+		const auto sci = MyPlugin::instance()->message()->getSciCallFunctor();
+		ParseResult result;
+
+		const int lines = std::min(sci.call<int>(SCI_GETLINECOUNT), MAX_LINES);
+		for (int i = 0; i < lines; ++i)
+		{
+			const int indentWidth = sci.call<int>(SCI_GETLINEINDENTATION, i);
+			//if (indentWidth < 2)
+				//continue;
+			if (indentWidth > MAX_INDENTS)  // over MAX_INDENTS, this line must be for alignment, skip it
+				continue;
+
+			const int pos = sci.call<int>(SCI_POSITIONFROMLINE, i);
+			const char lineHeadChar = sci.call<char>(SCI_GETCHARAT, pos);
+
+			if (lineHeadChar == '\t')
+				++result.tabCount;
+
+			if (lineHeadChar == ' ')
+			{
+				++result.spaceTotal;
+				++result.spaceCount[indentWidth];
+			}
+		}
+
+		return result;
+	}
+}
 
 namespace MenuAction
 {
-	void doNothing();
-	void gotoWebsite();
-}
-
-
-nppAutoDetectIndent::IndentInfo nppAutoDetectIndent::getIndentInfo()
-{
-	const nppAutoDetectIndent::IndentType type = nppAutoDetectIndent::detectIndentType();
-	switch (type)
+	void toggleMenuCheckbox(const int index, const Settings::BoolGetter getFunc, const Settings::BoolSetter setFunc)
 	{
-		case nppAutoDetectIndent::IndentType::Spaces:
-			return IndentInfo {type, nppAutoDetectIndent::detectIndentSpaces()};
-		case nppAutoDetectIndent::IndentType::Tabs:
-			return IndentInfo {type, 0};
-		default:
-			return IndentInfo {nppAutoDetectIndent::IndentType::Invalid, 0};
-	};
-}
+		const bool newSetting = !(Settings::instance()->*getFunc)();
+		const MyPlugin *plugin = MyPlugin::instance();
+		plugin->message()->sendNppMessage(NPPM_SETMENUITEMCHECK, plugin->m_funcItems[index]._cmdID, newSetting);
+		(Settings::instance()->*setFunc)(newSetting);
+	}
 
-void nppAutoDetectIndent::applyIndentInfo(const nppAutoDetectIndent::IndentInfo &info)
-{
-	const HWND sciHwnd = plugin.getCurrentScintillaHwnd();
-	switch (info.type)
+	void selectDisablePlugin()
 	{
-		case nppAutoDetectIndent::IndentType::Spaces:
-		{
-			::PostMessage(sciHwnd, SCI_SETTABINDENTS, true, 0);
+		toggleMenuCheckbox(0, &Settings::getDisablePlugin, &Settings::setDisablePlugin);
 
-			::PostMessage(sciHwnd, SCI_SETINDENT, info.num, 0);
-			::PostMessage(sciHwnd, SCI_SETUSETABS, false, 0);
-			break;
+		MyPlugin *plugin = MyPlugin::instance();
+		const bool isDisable = Settings::instance()->getDisablePlugin();
+		if (isDisable)
+		{
+			plugin->indentCache.clear();
+			nppAutoDetectIndent::applyNppSettings(plugin->nppOriginalSettings);
 		}
-
-		case nppAutoDetectIndent::IndentType::Tabs:
+		else
 		{
-			::PostMessage(sciHwnd, SCI_SETTABINDENTS, false, 0);
+			const int id = plugin->message()->sendNppMessage<int>(NPPM_GETCURRENTBUFFERID, 0, 0);
+			const nppAutoDetectIndent::IndentInfo info = nppAutoDetectIndent::detectIndentInfo();
 
-			// no need of SCI_SETINDENT
-			::PostMessage(sciHwnd, SCI_SETUSETABS, true, 0);
-			break;
-		}
-
-		case nppAutoDetectIndent::IndentType::Invalid:
-		{
-			break;  // do nothing
-		}
-
-		default:
-			assert(false);
-	};
-}
-
-int nppAutoDetectIndent::detectIndentSpaces()
-{
-	// return: number of spaces for indention
-
-	const auto sciCall = plugin.getScintillaDirectCall();
-
-	int spaces[10] = {0};  // [2, 12]
-
-	const int Lines = (std::max)(int(sciCall(SCI_GETLINECOUNT)), MAX_LINES);
-	for (int i = 0; i < Lines; ++i)
-	{
-		const int indentWidth = int(sciCall(SCI_GETLINEINDENTATION, i));
-		if (indentWidth < 2)
-			continue;
-
-		const int linePos = int(sciCall(SCI_POSITIONFROMLINE, i));
-		const char lineHeadChar = char(sciCall(SCI_GETCHARAT, linePos));
-
-		if (lineHeadChar == '\t')
-			continue;
-
-		// TODO: get length of continuous spaces
-		// but now lets just be lazy...
-
-		for (int k = 0; k < ARRAY_LENGTH(spaces); ++k)
-		{
-			if (indentWidth % (k + 2) == 0)
-				++spaces[k];
+			plugin->indentCache[id] = info;
+			applyIndentInfo(info);
 		}
 	}
 
-	int which = 0;
-	int weight = 0;
-	for (int i = (ARRAY_LENGTH(spaces) - 1); i >= 0; --i)  // give larger indents higher chance
+	void doNothing()
 	{
-		if (spaces[i] > (weight * 3 / 2))
-		{
-			weight = spaces[i];
-			which = i;
-		}
+		/*
+		typedef std::chrono::high_resolution_clock Clock;
+		auto t1 = Clock::now();
+		// do something
+		auto t2 = Clock::now();
+		auto ms = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
+		*/
 	}
 
-	return (which + 2);
+	void gotoWebsite()
+	{
+		ShellExecute(NULL, TEXT("open"), TEXT("https://github.com/Chocobo1/nppAutoDetectIndent"), NULL, NULL, SW_SHOWDEFAULT);
+	}
 }
 
-nppAutoDetectIndent::IndentType nppAutoDetectIndent::detectIndentType()
+namespace nppAutoDetectIndent
 {
-	// return -1: cannot decide
-	// return  0: indent type is spaces
-	// return  1: indent type is tabs
-
-	const auto sciCall = plugin.getScintillaDirectCall();
-
-	size_t tabs = 0;
-	size_t spaces = 0;
-
-	const int Lines = (std::max)(int(sciCall(SCI_GETLINECOUNT)), MAX_LINES);
-	for (int i = 0; i < Lines; ++i)
+	IndentInfo detectIndentInfo()
 	{
-		const int indentWidth = int(sciCall(SCI_GETLINEINDENTATION, i));  // tabs width depends on SCI_SETTABWIDTH
-		if (indentWidth < 2)
-			continue;
+		const ParseResult result = parseDocument();
+		IndentInfo info;
 
-		const int linePos = int(sciCall(SCI_POSITIONFROMLINE, i));
-		const char lineHeadChar = char(sciCall(SCI_GETCHARAT, linePos));
-		if (lineHeadChar == '\t')
-			++tabs;
-		else if (lineHeadChar == ' ')
+		// decide `type`
+		if ((result.tabCount == 0) && (result.spaceTotal == 0))
+			info.type = IndentInfo::IndentType::Invalid;
+		else if (result.spaceTotal > (result.tabCount * 4))
+			info.type = IndentInfo::IndentType::Space;
+		else if (result.tabCount > (result.spaceTotal * 4))
+			info.type = IndentInfo::IndentType::Tab;
+		/*else
 		{
-			if (indentWidth >(80 / 3))  // 1/3 of 80-width screen, this line must be alignment, skip
-				;
-			else
-				++spaces;
+			const auto sci = plugin.getSciCallFunctor();
+			const bool useTab = sci.call<bool>(SCI_GETUSETABS);
+			info.type = useTab ? IndentType::Tab : IndentType::Space;
+		}*/
+
+		// decide `num`
+		if (info.type == IndentInfo::IndentType::Space)
+		{
+			decltype(ParseResult::spaceCount) tempCount {};
+
+			for (int i = 1; i < result.spaceCount.size(); ++i)
+			{
+				for (int k = 1; k <= i; ++k)
+				{
+					if ((i % k) == 0)
+						tempCount[k] += result.spaceCount[i];
+				}
+			}
+
+			int which = 0;
+			int weight = 0;
+			for (int i = (static_cast<int>(tempCount.size()) - 1); i >= 0; --i)  // give big indents higher chance
+			{
+				if (tempCount[i] > (weight * 3 / 2))
+				{
+					weight = tempCount[i];
+					which = i;
+				}
+			}
+
+			info.num = which;
 		}
+
+		return info;
 	}
 
-	if ((tabs == 0) && (spaces == 0))
-		return nppAutoDetectIndent::IndentType::Invalid;
-
-	if (spaces > (tabs * 4))
-		return nppAutoDetectIndent::IndentType::Spaces;
-	else if (tabs > (spaces * 4))
-		return nppAutoDetectIndent::IndentType::Tabs;
-	else
+	void applyIndentInfo(const IndentInfo &info)
 	{
-		bool useTab = (bool) sciCall(SCI_GETUSETABS);
-		return useTab ? nppAutoDetectIndent::IndentType::Tabs : nppAutoDetectIndent::IndentType::Spaces;
+		const auto *message = MyPlugin::instance()->message();
+		switch (info.type)
+		{
+			case IndentInfo::IndentType::Space:
+			{
+				message->postSciMessages({
+					{SCI_SETTABINDENTS, true, 0},
+					{SCI_SETINDENT, static_cast<WPARAM>(info.num), 0},
+					{SCI_SETUSETABS, false, 0}
+				});
+				break;
+			}
+
+			case IndentInfo::IndentType::Tab:
+			{
+				message->postSciMessages({
+					{SCI_SETTABINDENTS, false, 0},
+					// no need of SCI_SETINDENT
+					{SCI_SETUSETABS, true, 0}
+				});
+				break;
+			}
+
+			case IndentInfo::IndentType::Invalid:
+			{
+				break;  // do nothing
+			}
+
+			default:
+				throw std::logic_error("Unexpected IndentInfo type");
+		};
+	}
+
+	NppSettings detectNppSettings()
+	{
+		const auto sci = MyPlugin::instance()->message()->getSciCallFunctor();
+		const bool tabIndents = sci.call<bool>(SCI_GETTABINDENTS);
+		const bool useTabs = sci.call<bool>(SCI_GETUSETABS);
+		const int indents = sci.call<int>(SCI_GETINDENT);
+		return {tabIndents, useTabs, indents};
+	}
+
+	void applyNppSettings(const NppSettings &settings)
+	{
+		MyPlugin::instance()->message()->postSciMessages({
+			{SCI_SETTABINDENTS, settings.tabIndents, 0},
+			{SCI_SETINDENT, static_cast<WPARAM>(settings.indents), 0},
+			{SCI_SETUSETABS, settings.useTabs, 0}
+		});
 	}
 }
 
+
+MyPlugin *MyPlugin::m_instance = nullptr;
 
 MyPlugin::MyPlugin()
+	: m_funcItems
+	{{
+		{TEXT("Disable plugin"), MenuAction::selectDisablePlugin},
+		{TEXT("---"), nullptr},
+		{TEXT("Version: " PLUGIN_VERSION), MenuAction::doNothing},
+		{TEXT("Goto website..."), MenuAction::gotoWebsite}
+	}}
 {
-	const FuncItem items[] = {
-		funcItemCreate(TEXT("Version: " PLUGIN_VERSION), MenuAction::doNothing, NULL, false),
-		funcItemCreate(TEXT("Goto website..."), MenuAction::gotoWebsite, NULL, false)
-	};
+}
 
-	for (const auto &i : items)
-		m_funcItems.emplace_back(i);
+void MyPlugin::initInstance()
+{
+	if (!m_instance)
+		m_instance = new MyPlugin;
+}
+
+void MyPlugin::freeInstance()
+{
+	delete m_instance;
+	m_instance = nullptr;
+}
+
+MyPlugin* MyPlugin::instance()
+{
+	return m_instance;
 }
 
 void MyPlugin::setupNppData(const NppData &data)
 {
-	m_nppData = data;
+	m_message = std::make_unique<Message>(data);
 }
 
-HWND MyPlugin::getNppHwnd() const
+MyPlugin::Message* MyPlugin::message() const
 {
-	return m_nppData._nppHandle;
+	return m_message.get();
 }
 
-HWND MyPlugin::getCurrentScintillaHwnd() const
+
+MyPlugin::Message::Message(const NppData &data)
+	: m_nppData(data)
+{
+}
+
+void MyPlugin::Message::postSciMessages(const std::initializer_list<MessageParams> params) const
+{
+	const HWND sciHwnd = getCurrentSciHwnd();
+	for (const auto &param : params)
+		::PostMessage(sciHwnd, param.msg, param.wParam, param.lParam);
+}
+
+MyPlugin::CallFunctor MyPlugin::Message::getSciCallFunctor() const
+{
+	const HWND scintillaHwnd = getCurrentSciHwnd();
+
+	static const SciFnDirect func = reinterpret_cast<SciFnDirect>(::SendMessage(scintillaHwnd, SCI_GETDIRECTFUNCTION, 0, 0));
+	const sptr_t hnd = static_cast<sptr_t>(::SendMessage(scintillaHwnd, SCI_GETDIRECTPOINTER, 0, 0));
+	return {func, hnd};
+}
+
+HWND MyPlugin::Message::getCurrentSciHwnd() const
 {
 	int view = -1;
-	::SendMessage(m_nppData._nppHandle, NPPM_GETCURRENTSCINTILLA, 0, (LPARAM) &view);
+	::SendMessage(m_nppData._nppHandle, NPPM_GETCURRENTSCINTILLA, 0, reinterpret_cast<LPARAM>(&view));
 	return (view == 0) ? m_nppData._scintillaMainHandle : m_nppData._scintillaSecondHandle;
-}
-
-MyPlugin::DirectCallFunctor MyPlugin::getScintillaDirectCall(HWND scintillaHwnd) const
-{
-	if (scintillaHwnd == NULL)
-		scintillaHwnd = getCurrentScintillaHwnd();
-
-	const SciFnDirect func = (SciFnDirect) ::SendMessage(scintillaHwnd, SCI_GETDIRECTFUNCTION, 0, 0);
-	const sptr_t hnd = (sptr_t) ::SendMessage(scintillaHwnd, SCI_GETDIRECTPOINTER, 0, 0);
-
-	return DirectCallFunctor(func, hnd);
-}
-
-FuncItem * MyPlugin::getFunctionsArray() const
-{
-	return (FuncItem *) m_funcItems.data();
-}
-
-size_t MyPlugin::functionsCount() const
-{
-	return m_funcItems.size();
-}
-
-FuncItem MyPlugin::funcItemCreate(const TCHAR *cmdName, const PFUNCPLUGINCMD pFunc, const bool check0nInit, ShortcutKey *sk)
-{
-	FuncItem item = {0};
-
-	StringCchCopy(item._itemName, ARRAY_LENGTH(item._itemName), cmdName);
-	item._pFunc = pFunc;
-	item._init2Check = check0nInit;
-	item._pShKey = sk;
-
-	return item;
-}
-
-
-void MenuAction::doNothing()
-{
-	/*
-	typedef std::chrono::high_resolution_clock Clock;
-	auto t1 = Clock::now();
-	// do something
-	auto t2 = Clock::now();
-	auto ms = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
-	*/
-}
-
-void MenuAction::gotoWebsite()
-{
-	ShellExecute(NULL, TEXT("open"), TEXT("https://github.com/Chocobo1/nppAutoDetectIndent"), NULL, NULL, SW_SHOWDEFAULT);
 }

@@ -1,77 +1,124 @@
-#pragma once
+/*
+*  Chocobo1/nppAutoDetectIndent
+*
+*   Copyright 2017-2018 by Mike Tzou (Chocobo1)
+*     https://github.com/Chocobo1/nppAutoDetectIndent
+*
+*   Licensed under GNU General Public License 3 or later.
+*
+*  @license GPL3 <https://www.gnu.org/licenses/gpl-3.0-standalone.html>
+*/
 
+#ifndef NPPAUTODETECTINDENT_H
+#define NPPAUTODETECTINDENT_H
+
+#include <array>
+#include <initializer_list>
+#include <memory>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
-#include <vector>
-
-
-#define ARRAY_LENGTH(a) (std::extent<decltype(a)>::value)
-
 
 namespace nppAutoDetectIndent
 {
-	enum class IndentType
-	{
-		Spaces,
-		Tabs,
-		Invalid
-	};
-
-	IndentType detectIndentType();
-	int detectIndentSpaces();
-
 	struct IndentInfo
 	{
-		IndentType type;
-		int num;  // number of indents
-	};
+		enum class IndentType
+		{
+			Space,
+			Tab,
+			Invalid
+		};
 
-	IndentInfo getIndentInfo();
+		IndentType type = IndentType::Invalid;
+		int num = 0;  // number of indention per line
+	};
+	IndentInfo detectIndentInfo();
 	void applyIndentInfo(const IndentInfo &info);
 
-	typedef std::unordered_map<uptr_t, IndentInfo> IndentCache;  // <file name, IndentInfo>
-}
+	struct NppSettings
+	{
+		bool tabIndents = false;
+		bool useTabs = false;
+		int indents = 0;
+	};
+	NppSettings detectNppSettings();
+	void applyNppSettings(const NppSettings &settings);
 
+	using IndentCache = std::unordered_map<uptr_t, IndentInfo>;  // <file name, IndentInfo>
+}
 
 class MyPlugin
 {
-	public:
-	class DirectCallFunctor
+	class CallFunctor
 	{
 		public:
-		explicit DirectCallFunctor(const SciFnDirect func, const sptr_t hnd)
-			: m_functor(func)
-			, m_hnd(hnd)
-		{
-		}
+			constexpr CallFunctor(const SciFnDirect func, const sptr_t hnd)
+				: m_functor(func)
+				, m_hnd(hnd)
+			{
+			}
 
-		sptr_t operator()(const UINT Msg, const WPARAM wParam = 0, const LPARAM lParam = 0) const
-		{
-			return m_functor(m_hnd, Msg, wParam, lParam);
-		}
+			template <typename T>
+			constexpr T call(const UINT Msg, const WPARAM wParam = 0, const LPARAM lParam = 0) const
+			{
+				return static_cast<T>(m_functor(m_hnd, Msg, wParam, lParam));
+			}
 
 		private:
-		const SciFnDirect m_functor;
-		const sptr_t m_hnd;
+			const SciFnDirect m_functor;
+			const sptr_t m_hnd;
 	};
 
-	const TCHAR *PLUGIN_NAME = TEXT("Auto Detect Indention");
+	struct MessageParams
+	{
+		UINT msg;
+		WPARAM wParam;
+		LPARAM lParam;
+	};
 
-	MyPlugin();
+	class Message
+	{
+		public:
+			Message(const NppData &data);
 
-	void setupNppData(const NppData &data);
+			template <typename T = void>
+			constexpr T sendNppMessage(const UINT msg, const WPARAM wParam, const LPARAM lParam) const
+			{
+				return static_cast<T>(::SendMessage(m_nppData._nppHandle, msg, wParam, lParam));
+			}
+			void postSciMessages(std::initializer_list<MessageParams> params) const;
 
-	HWND getNppHwnd() const;
-	HWND getCurrentScintillaHwnd() const;
-	DirectCallFunctor getScintillaDirectCall(HWND scintillaHwnd = NULL) const;
+			CallFunctor getSciCallFunctor() const;
 
-	FuncItem * getFunctionsArray() const;
-	size_t functionsCount() const;
+		private:
+			HWND getCurrentSciHwnd() const;
 
+			const NppData m_nppData;
+	};
 
+	public:
+		static void initInstance();
+		static void freeInstance();
+		static MyPlugin* instance();
+
+		void setupNppData(const NppData &data);
+
+		Message* message() const;
+
+		const std::array<FuncItem, 4> m_funcItems {};
+		nppAutoDetectIndent::IndentCache indentCache;
+		nppAutoDetectIndent::NppSettings nppOriginalSettings;
+
+		static constexpr TCHAR *PLUGIN_NAME = TEXT("Auto Detect Indention");
+		
 	private:
-	static FuncItem funcItemCreate(const TCHAR *cmdName, const PFUNCPLUGINCMD pFunc, const bool check0nInit, ShortcutKey *sk);
+		MyPlugin();
+		~MyPlugin() = default;
 
-	NppData m_nppData = {0};
-	std::vector<FuncItem> m_funcItems;
+		std::unique_ptr<Message> m_message;
+
+		static MyPlugin *m_instance;
 };
+
+#endif
