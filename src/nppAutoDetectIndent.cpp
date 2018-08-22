@@ -20,7 +20,7 @@
 
 #include "settings.h"
 
-#define PLUGIN_VERSION "1.1"
+#define PLUGIN_VERSION "1.2"
 
 namespace
 {
@@ -43,8 +43,6 @@ namespace
 		for (int i = 0; i < lines; ++i)
 		{
 			const int indentWidth = sci.call<int>(SCI_GETLINEINDENTATION, i);
-			//if (indentWidth < 2)
-				//continue;
 			if (indentWidth > MAX_INDENTS)  // over MAX_INDENTS, this line must be for alignment, skip it
 				continue;
 
@@ -139,9 +137,9 @@ namespace nppAutoDetectIndent
 		{
 			decltype(ParseResult::spaceCount) tempCount {};
 
-			for (int i = 1; i < result.spaceCount.size(); ++i)
+			for (int i = 2; i < result.spaceCount.size(); ++i)
 			{
-				for (int k = 1; k <= i; ++k)
+				for (int k = 2; k <= i; ++k)
 				{
 					if ((i % k) == 0)
 						tempCount[k] += result.spaceCount[i];

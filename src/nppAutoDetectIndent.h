@@ -111,7 +111,7 @@ class MyPlugin
 		nppAutoDetectIndent::NppSettings nppOriginalSettings;
 
 		static constexpr TCHAR *PLUGIN_NAME = TEXT("Auto Detect Indention");
-		
+
 	private:
 		MyPlugin();
 		~MyPlugin() = default;
