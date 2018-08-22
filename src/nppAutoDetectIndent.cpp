@@ -13,6 +13,7 @@
 #include "nppAutoDetectIndent.h"
 
 #include <algorithm>
+#include <cassert>
 #include <stdexcept>
 
 #include <Shellapi.h>
@@ -20,26 +21,57 @@
 
 #include "settings.h"
 
-#define PLUGIN_VERSION "1.2"
+#define PLUGIN_VERSION "1.3"
 
 namespace
 {
-	const int MAX_LINES = 5000;
 	const int MAX_INDENTS = (80 * 2 / 3) + 1;  // 2/3 of 80-width screen
 
-	struct ParseResult
+	void setupSciTextRange(Sci_TextRange &textRange, const decltype(Sci_CharacterRange::cpMin) begin, const decltype(Sci_CharacterRange::cpMax) end, char *strPtr)
+	{
+		assert(begin <= end);
+		textRange.chrg.cpMin = begin;
+		textRange.chrg.cpMax = end;
+		textRange.lpstrText = strPtr;
+	}
+
+	bool isCommentContinuation(const LangType langId, const char c)
+	{
+		switch (langId)
+		{
+			case L_PHP:
+			case L_C:
+			case L_CPP:
+			case L_CS:
+			case L_OBJC:
+			case L_JAVA:
+			case L_JAVASCRIPT:
+				return (c == '*');
+
+			default:
+				return false;
+		}
+	}
+
+	struct IndentionStats
 	{
 		int tabCount = 0;
 		int spaceTotal = 0;
 		std::array<int, MAX_INDENTS> spaceCount {};
 	};
 
-	ParseResult parseDocument()
+	IndentionStats parseDocument()
 	{
+		const int MAX_LINES = 5000;
+
 		const auto sci = MyPlugin::instance()->message()->getSciCallFunctor();
-		ParseResult result;
+		IndentionStats result;
+
+		LangType langId = L_EXTERNAL;
+		MyPlugin::instance()->message()->sendNppMessage(NPPM_GETCURRENTLANGTYPE, 0, reinterpret_cast<LPARAM>(&langId));
 
 		const int lines = std::min(sci.call<int>(SCI_GETLINECOUNT), MAX_LINES);
+		std::array<char, (MAX_INDENTS + 2)> textRangeBuffer {};  // indents + char + \0
 		for (int i = 0; i < lines; ++i)
 		{
 			const int indentWidth = sci.call<int>(SCI_GETLINEINDENTATION, i);
@@ -47,12 +79,22 @@ namespace
 				continue;
 
 			const int pos = sci.call<int>(SCI_POSITIONFROMLINE, i);
-			const char lineHeadChar = sci.call<char>(SCI_GETCHARAT, pos);
 
-			if (lineHeadChar == '\t')
+			// avoid interference from comment documentation blocks, such as:
+			// /*
+			//  *
+			// */
+			Sci_TextRange textRange;
+			setupSciTextRange(textRange, pos, (pos + indentWidth + 1), textRangeBuffer.data());
+			sci.call<int>(SCI_GETTEXTRANGE, 0, reinterpret_cast<LPARAM>(&textRange));
+			const char headCharAfterIndention = textRangeBuffer[indentWidth];
+			if (isCommentContinuation(langId, headCharAfterIndention))
+				continue;
+
+			const char headChar = sci.call<char>(SCI_GETCHARAT, pos);
+			if (headChar == '\t')
 				++result.tabCount;
-
-			if (lineHeadChar == ' ')
+			if (headChar == ' ')
 			{
 				++result.spaceTotal;
 				++result.spaceCount[indentWidth];
@@ -115,7 +157,7 @@ namespace nppAutoDetectIndent
 {
 	IndentInfo detectIndentInfo()
 	{
-		const ParseResult result = parseDocument();
+		const IndentionStats result = parseDocument();
 		IndentInfo info;
 
 		// decide `type`
@@ -135,7 +177,7 @@ namespace nppAutoDetectIndent
 		// decide `num`
 		if (info.type == IndentInfo::IndentType::Space)
 		{
-			decltype(ParseResult::spaceCount) tempCount {};
+			decltype(IndentionStats::spaceCount) tempCount {};
 
 			for (int i = 2; i < result.spaceCount.size(); ++i)
 			{
