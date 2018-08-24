@@ -192,7 +192,7 @@ namespace nppAutoDetectIndent
 		{
 			decltype(IndentionStats::spaceCount) tempCount {};
 
-			for (int i = 2; i < result.spaceCount.size(); ++i)
+			for (int i = 2; i < static_cast<int>(result.spaceCount.size()); ++i)
 			{
 				for (int k = 2; k <= i; ++k)
 				{
