@@ -21,7 +21,7 @@
 
 #include "settings.h"
 
-#define PLUGIN_VERSION "1.3"
+#define PLUGIN_VERSION "1.4"
 
 namespace
 {
@@ -51,6 +51,18 @@ namespace
 			default:
 				return false;
 		}
+	}
+
+	template <typename CharArray>
+	char findFirstCharAfterIndention(const CharArray &str)
+	{
+		for (const char c : str)
+		{
+			if (c == '\t' || c == ' ')
+				continue;
+			return c;
+		}
+		return -1;
 	}
 
 	struct IndentionStats
@@ -87,11 +99,12 @@ namespace
 			Sci_TextRange textRange;
 			setupSciTextRange(textRange, pos, (pos + indentWidth + 1), textRangeBuffer.data());
 			sci.call<int>(SCI_GETTEXTRANGE, 0, reinterpret_cast<LPARAM>(&textRange));
-			const char headCharAfterIndention = textRangeBuffer[indentWidth];
+
+			const char headChar = textRangeBuffer[0];
+			const char headCharAfterIndention = findFirstCharAfterIndention(textRangeBuffer);
 			if (isCommentContinuation(langId, headCharAfterIndention))
 				continue;
 
-			const char headChar = sci.call<char>(SCI_GETCHARAT, pos);
 			if (headChar == '\t')
 				++result.tabCount;
 			if (headChar == ' ')
