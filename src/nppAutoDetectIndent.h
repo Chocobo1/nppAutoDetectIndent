@@ -45,7 +45,7 @@ namespace nppAutoDetectIndent
 	NppSettings detectNppSettings();
 	void applyNppSettings(const NppSettings &settings);
 
-	using IndentCache = std::unordered_map<uptr_t, IndentInfo>;  // <file name, IndentInfo>
+	using IndentCache = std::unordered_map<std::wstring, IndentInfo>;  // <full file path, IndentInfo>
 }
 
 class MyPlugin

@@ -21,7 +21,7 @@
 
 #include "settings.h"
 
-#define PLUGIN_VERSION "1.4"
+#define PLUGIN_VERSION "1.5"
 
 namespace
 {
@@ -141,10 +141,11 @@ namespace MenuAction
 		}
 		else
 		{
-			const int id = plugin->message()->sendNppMessage<int>(NPPM_GETCURRENTBUFFERID, 0, 0);
+			TCHAR path[MAX_PATH + 1] {};
+			plugin->message()->sendNppMessage<>(NPPM_GETFULLCURRENTPATH, MAX_PATH, reinterpret_cast<LPARAM>(path));
 			const nppAutoDetectIndent::IndentInfo info = nppAutoDetectIndent::detectIndentInfo();
 
-			plugin->indentCache[id] = info;
+			plugin->indentCache[path] = info;
 			applyIndentInfo(info);
 		}
 	}

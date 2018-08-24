@@ -77,9 +77,9 @@ extern "C" NPPAUTODETECTINDENT_API void beNotified(SCNotification *notifyCode)
 
 		case NPPN_FILECLOSED:
 		{
-			const uptr_t id = notifyCode->nmhdr.idFrom;
-
-			indentCache.erase(id);
+			TCHAR path[MAX_PATH + 1] {};
+			myPlugin->message()->sendNppMessage<>(NPPM_GETFULLCURRENTPATH, MAX_PATH, reinterpret_cast<LPARAM>(path));
+			indentCache.erase(path);
 			break;
 		}
 
@@ -88,12 +88,12 @@ extern "C" NPPAUTODETECTINDENT_API void beNotified(SCNotification *notifyCode)
 			if (Settings::instance()->getDisablePlugin())
 				break;
 
-			const uptr_t id = notifyCode->nmhdr.idFrom;
+			TCHAR path[MAX_PATH + 1] {};
+			myPlugin->message()->sendNppMessage<>(NPPM_GETFULLCURRENTPATH, MAX_PATH, reinterpret_cast<LPARAM>(path));
 
-			const auto iter = indentCache.find(id);
+			const auto iter = indentCache.find(path);
 			const nppAutoDetectIndent::IndentInfo info = (iter != indentCache.end()) ? iter->second : nppAutoDetectIndent::detectIndentInfo();
-
-			indentCache[id] = info;
+			indentCache[path] = info;
 			applyIndentInfo(info);
 			break;
 		}
