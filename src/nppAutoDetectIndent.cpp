@@ -58,7 +58,7 @@ namespace
 	{
 		for (const char c : str)
 		{
-			if (c == '\t' || c == ' ')
+			if ((c == '\t') || (c == ' '))
 				continue;
 			return c;
 		}
