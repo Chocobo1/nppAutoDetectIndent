@@ -75,11 +75,34 @@ extern "C" NPPAUTODETECTINDENT_API void beNotified(SCNotification *notifyCode)
 			break;
 		}
 
-		case NPPN_FILECLOSED:
+		case NPPN_FILEBEFORECLOSE:
 		{
 			TCHAR path[MAX_PATH + 1] {};
 			myPlugin->message()->sendNppMessage<>(NPPM_GETFULLCURRENTPATH, MAX_PATH, reinterpret_cast<LPARAM>(path));
 			indentCache.erase(path);
+			break;
+		}
+
+		case NPPN_FILEBEFORESAVE:
+		{
+			const uptr_t bufferId = notifyCode->nmhdr.idFrom;
+			TCHAR oldPath[MAX_PATH + 1] {};
+			myPlugin->message()->sendNppMessage<>(NPPM_GETFULLCURRENTPATH, MAX_PATH, reinterpret_cast<LPARAM>(oldPath));
+
+			myPlugin->fileRenameMap[bufferId] = oldPath;
+			break;
+		}
+
+		case NPPN_FILESAVED:
+		{
+			const uptr_t bufferId = notifyCode->nmhdr.idFrom;
+			const std::wstring oldPath = myPlugin->fileRenameMap[bufferId];
+			myPlugin->fileRenameMap.erase(bufferId);
+
+			TCHAR newPath[MAX_PATH + 1] {};
+			myPlugin->message()->sendNppMessage<>(NPPM_GETFULLCURRENTPATH, MAX_PATH, reinterpret_cast<LPARAM>(newPath));
+			indentCache[newPath] = indentCache[oldPath];
+			indentCache.erase(oldPath);
 			break;
 		}
 

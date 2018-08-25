@@ -108,6 +108,7 @@ class MyPlugin
 
 		const std::array<FuncItem, 4> m_funcItems {};
 		nppAutoDetectIndent::IndentCache indentCache;
+		std::unordered_map<uptr_t, std::wstring> fileRenameMap;  // <buffer id, old file path>
 		nppAutoDetectIndent::NppSettings nppOriginalSettings;
 
 		static constexpr TCHAR *PLUGIN_NAME = TEXT("Auto Detect Indention");
