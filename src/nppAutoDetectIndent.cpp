@@ -21,7 +21,7 @@
 
 #include "settings.h"
 
-#define PLUGIN_VERSION "1.6"
+#define PLUGIN_VERSION "1.7"
 
 namespace
 {

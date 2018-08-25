@@ -101,8 +101,11 @@ extern "C" NPPAUTODETECTINDENT_API void beNotified(SCNotification *notifyCode)
 
 			TCHAR newPath[MAX_PATH + 1] {};
 			myPlugin->message()->sendNppMessage<>(NPPM_GETFULLCURRENTPATH, MAX_PATH, reinterpret_cast<LPARAM>(newPath));
-			indentCache[newPath] = indentCache[oldPath];
-			indentCache.erase(oldPath);
+			if (newPath != oldPath)
+			{
+				indentCache[newPath] = indentCache[oldPath];
+				indentCache.erase(oldPath);
+			}
 			break;
 		}
 
