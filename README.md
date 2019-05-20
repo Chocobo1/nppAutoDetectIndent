@@ -11,17 +11,14 @@ Detects indention (tab or spaces) and auto adjust <kbd>Tab</kbd> key on-the-fly
 | Cannot determine       | Depends on Notepad++ settings |
 
 ## Installation
-1. Download and extract the archive from below
-2. If you are running Notepad++ 7.6.1 or later, move `nppAutoDetectIndent.dll` into Notepad++ `plugin\nppAutoDetectIndent` folder.
-   Note that you will need to create a new folder named `nppAutoDetectIndent` manually.<br>
-   For Notepad++ x86: `C:\Program Files (x86)\Notepad++\plugins\nppAutoDetectIndent`<br>
-   For Notepad++ x64: `C:\Program Files\Notepad++\plugins\nppAutoDetectIndent`
-2. If you are running Notepad++ version prior to 7.6.1, move `nppAutoDetectIndent.dll` into Notepad++ `plugin` folder.<br>
+1. If you are running Notepad++ 7.6 or later: You are encouraged to use [Notepad++ Plugins Admin](https://notepad-plus-plus.org/features/plugin-admin.html) for installation.<br>
+   The plugin is named: `Auto Detect Indention Plugin`
+2. If you are running Notepad++ version prior to 7.6: Download and extract the archive from below and move `nppAutoDetectIndent.dll` into Notepad++ `plugin` folder.<br>
    For Notepad++ x86: `C:\Program Files (x86)\Notepad++\plugins`<br>
    For Notepad++ x64: `C:\Program Files\Notepad++\plugins`
 
 ## Download
-[Releases page](../../releases) (x86 & x64 included)
+[Releases page](../../releases)
 
 ## Why
 Many projects have differnet coding style requirements, some use tabs other prefer spaces.<br>
