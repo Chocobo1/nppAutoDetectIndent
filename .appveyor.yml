@@ -56,12 +56,17 @@ build_script:
 
 # scripts to run before deployment
 after_build:
-  - cd "%REPO_DIR%"
-  - mkdir "x86" "x64"
-  - copy "src\Release\nppAutoDetectIndent.dll" "x86"
-  - copy "src\x64\Release\nppAutoDetectIndent.dll" "x64"
-  - 7z a -mx9 "nppAutoDetectIndent.7z" "x86" "x64"
-  - 'powershell -Command "& { $hash = (Get-FileHash -Algorithm SHA256 "nppAutoDetectIndent.7z").hash.ToString().toLower(); Write-Host $hash " *nppAutoDetectIndent.7z"; }" > "nppAutoDetectIndent.7z.sha256"'
+  - cd "%REPO_DIR%\src\Release"
+  - 7z a -mx9 "x86.zip" "nppAutoDetectIndent.dll"
+  - 'powershell -Command "& { $hash = (Get-FileHash -Algorithm SHA256 "x86.zip").hash.ToString().toLower(); Write-Host $hash " *x86.zip"; }" > "x86.zip.sha256"'
+  - move "x86.zip" "%REPO_DIR%"
+  - move "x86.zip.sha256" "%REPO_DIR%"
+  - cd "%REPO_DIR%\src\x64\Release"
+  - 7z a -mx9 "x64.zip" "nppAutoDetectIndent.dll"
+  - 'powershell -Command "& { $hash = (Get-FileHash -Algorithm SHA256 "x64.zip").hash.ToString().toLower(); Write-Host $hash " *x64.zip"; }" > "x64.zip.sha256"'
+  - move "x64.zip" "%REPO_DIR%"
+  - move "x64.zip.sha256" "%REPO_DIR%"
+
 
 #---------------------------------#
 #  tests configuration            #
@@ -76,7 +81,11 @@ test: off
 #---------------------------------#
 
 artifacts:
-  - path: nppAutoDetectIndent.7z
-    name: plugin
-  - path: nppAutoDetectIndent.7z.sha256
+  - path: x64.zip
+    name: x64 plugin
+  - path: x64.zip.sha256
+    name: checksum
+  - path: x86.zip
+    name: x86 plugin
+  - path: x86.zip.sha256
     name: checksum
