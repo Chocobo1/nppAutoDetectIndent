@@ -40,6 +40,7 @@ namespace nppAutoDetectIndent
 	{
 		bool tabIndents = false;
 		bool useTabs = false;
+		bool backspaceIndents = false;
 		int indents = 0;
 	};
 	NppSettings detectNppSettings();

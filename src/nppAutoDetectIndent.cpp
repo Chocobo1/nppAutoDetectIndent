@@ -228,8 +228,9 @@ namespace nppAutoDetectIndent
 			{
 				message->postSciMessages({
 					{SCI_SETTABINDENTS, true, 0},
-					{SCI_SETINDENT, static_cast<WPARAM>(info.num), 0},
-					{SCI_SETUSETABS, false, 0}
+					{SCI_SETUSETABS, false, 0},
+					{SCI_SETBACKSPACEUNINDENTS, true, 0},
+					{SCI_SETINDENT, static_cast<WPARAM>(info.num), 0}
 				});
 				break;
 			}
@@ -238,8 +239,9 @@ namespace nppAutoDetectIndent
 			{
 				message->postSciMessages({
 					{SCI_SETTABINDENTS, false, 0},
+					{SCI_SETUSETABS, true, 0},
+					{SCI_SETBACKSPACEUNINDENTS, false, 0}
 					// no need of SCI_SETINDENT
-					{SCI_SETUSETABS, true, 0}
 				});
 				break;
 			}
@@ -257,18 +259,21 @@ namespace nppAutoDetectIndent
 	NppSettings detectNppSettings()
 	{
 		const auto sci = MyPlugin::instance()->message()->getSciCallFunctor();
-		const bool tabIndents = sci.call<bool>(SCI_GETTABINDENTS);
-		const bool useTabs = sci.call<bool>(SCI_GETUSETABS);
-		const int indents = sci.call<int>(SCI_GETINDENT);
-		return {tabIndents, useTabs, indents};
+		return {
+			sci.call<bool>(SCI_GETTABINDENTS),
+			sci.call<bool>(SCI_GETUSETABS),
+			sci.call<bool>(SCI_GETBACKSPACEUNINDENTS),
+			sci.call<int>(SCI_GETINDENT)
+		};
 	}
 
 	void applyNppSettings(const NppSettings &settings)
 	{
 		MyPlugin::instance()->message()->postSciMessages({
 			{SCI_SETTABINDENTS, settings.tabIndents, 0},
-			{SCI_SETINDENT, static_cast<WPARAM>(settings.indents), 0},
-			{SCI_SETUSETABS, settings.useTabs, 0}
+			{SCI_SETUSETABS, settings.useTabs, 0},
+			{SCI_SETBACKSPACEUNINDENTS, settings.backspaceIndents, 0},
+			{SCI_SETINDENT, static_cast<WPARAM>(settings.indents), 0}
 		});
 	}
 }
