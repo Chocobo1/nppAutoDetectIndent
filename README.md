@@ -30,7 +30,7 @@ I first discovered this function in [Geany editor](https://www.geany.org/): [det
 I thought it's cool because you don't have to worry about having the correct settings in your editor nor need to care about setting up [editorconfig](https://editorconfig.org/), it just works!
 
 ## Compiler
-Visual Studio 2017 Community
+Visual Studio 2019 Community
 
 ## License
 See [LICENSE](./LICENSE) file
