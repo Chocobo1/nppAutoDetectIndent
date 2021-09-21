@@ -238,9 +238,9 @@ namespace nppAutoDetectIndent
 			case IndentInfo::IndentType::Tab:
 			{
 				message->postSciMessages({
-					{SCI_SETTABINDENTS, false, 0},
+					{SCI_SETTABINDENTS, true, 0},
 					{SCI_SETUSETABS, true, 0},
-					{SCI_SETBACKSPACEUNINDENTS, false, 0}
+					{SCI_SETBACKSPACEUNINDENTS, true, 0}
 					// no need of SCI_SETINDENT
 				});
 				break;
