@@ -46,7 +46,7 @@ clone_folder: *REPO_DIR
 # scripts to run before build
 before_build:
   - cd "%REPO_DIR%"
-  - git submodule update --init --remote --recursive --depth 1
+  - git submodule update --init --recursive --depth 1
 
 # to run your custom scripts instead of automatic MSBuild
 build_script:
