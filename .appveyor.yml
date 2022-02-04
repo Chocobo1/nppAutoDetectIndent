@@ -25,8 +25,8 @@ branches:
 #---------------------------------#
 
 # environment variables
-# build system info: https://www.appveyor.com/docs/build-environment/#pre-installed-software
-image: Visual Studio 2019
+# build system info: https://www.appveyor.com/docs/windows-images-software/
+image: Visual Studio 2022
 
 environment:
   REPO_DIR: &REPO_DIR c:\project  # directory created by appveyor
