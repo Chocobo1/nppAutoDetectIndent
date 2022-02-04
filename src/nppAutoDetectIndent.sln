@@ -1,22 +1,28 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.26228.4
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.32112.339
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "nppAutoDetectIndent", "nppAutoDetectIndent.vcxproj", "{261136DC-078D-4D1F-99D5-558C1DF604F0}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|ARM64 = Debug|ARM64
 		Debug|x64 = Debug|x64
 		Debug|x86 = Debug|x86
+		Release|ARM64 = Release|ARM64
 		Release|x64 = Release|x64
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{261136DC-078D-4D1F-99D5-558C1DF604F0}.Debug|ARM64.ActiveCfg = Debug|ARM64
+		{261136DC-078D-4D1F-99D5-558C1DF604F0}.Debug|ARM64.Build.0 = Debug|ARM64
 		{261136DC-078D-4D1F-99D5-558C1DF604F0}.Debug|x64.ActiveCfg = Debug|x64
 		{261136DC-078D-4D1F-99D5-558C1DF604F0}.Debug|x64.Build.0 = Debug|x64
 		{261136DC-078D-4D1F-99D5-558C1DF604F0}.Debug|x86.ActiveCfg = Debug|Win32
 		{261136DC-078D-4D1F-99D5-558C1DF604F0}.Debug|x86.Build.0 = Debug|Win32
+		{261136DC-078D-4D1F-99D5-558C1DF604F0}.Release|ARM64.ActiveCfg = Release|ARM64
+		{261136DC-078D-4D1F-99D5-558C1DF604F0}.Release|ARM64.Build.0 = Release|ARM64
 		{261136DC-078D-4D1F-99D5-558C1DF604F0}.Release|x64.ActiveCfg = Release|x64
 		{261136DC-078D-4D1F-99D5-558C1DF604F0}.Release|x64.Build.0 = Release|x64
 		{261136DC-078D-4D1F-99D5-558C1DF604F0}.Release|x86.ActiveCfg = Release|Win32
@@ -24,5 +30,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {02F1B807-31B8-446A-8693-469F54646B29}
 	EndGlobalSection
 EndGlobal

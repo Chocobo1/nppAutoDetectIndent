@@ -32,6 +32,7 @@ environment:
   REPO_DIR: &REPO_DIR c:\project  # directory created by appveyor
 
   SOL_FILE: nppAutoDetectIndent.sln
+  MSBUILD_CMD_ARM64: /maxcpucount /property:Configuration=Release,Platform=ARM64
   MSBUILD_CMD_X86: /maxcpucount /property:Configuration=Release,Platform=x86
   MSBUILD_CMD_X64: /maxcpucount /property:Configuration=Release,Platform=x64
 
@@ -51,11 +52,17 @@ before_build:
 # to run your custom scripts instead of automatic MSBuild
 build_script:
   - cd "%REPO_DIR%\src"
+  - msbuild %SOL_FILE% %MSBUILD_CMD_ARM64%
   - msbuild %SOL_FILE% %MSBUILD_CMD_X86%
   - msbuild %SOL_FILE% %MSBUILD_CMD_X64%
 
 # scripts to run before deployment
 after_build:
+  - cd "%REPO_DIR%\src\ARM64\Release"
+  - 7z a -mx9 "arm64.zip" "nppAutoDetectIndent.dll"
+  - 'powershell -Command "& { $hash = (Get-FileHash -Algorithm SHA256 "arm64.zip").hash.ToString().toLower(); Write-Host $hash " *arm64.zip"; }" > "arm64.zip.sha256"'
+  - move "arm64.zip" "%REPO_DIR%"
+  - move "arm64.zip.sha256" "%REPO_DIR%"
   - cd "%REPO_DIR%\src\Release"
   - 7z a -mx9 "x86.zip" "nppAutoDetectIndent.dll"
   - 'powershell -Command "& { $hash = (Get-FileHash -Algorithm SHA256 "x86.zip").hash.ToString().toLower(); Write-Host $hash " *x86.zip"; }" > "x86.zip.sha256"'
@@ -66,7 +73,6 @@ after_build:
   - 'powershell -Command "& { $hash = (Get-FileHash -Algorithm SHA256 "x64.zip").hash.ToString().toLower(); Write-Host $hash " *x64.zip"; }" > "x64.zip.sha256"'
   - move "x64.zip" "%REPO_DIR%"
   - move "x64.zip.sha256" "%REPO_DIR%"
-
 
 #---------------------------------#
 #  tests configuration            #
@@ -81,11 +87,15 @@ test: off
 #---------------------------------#
 
 artifacts:
-  - path: x64.zip
-    name: x64 plugin
-  - path: x64.zip.sha256
+  - path: arm64.zip
+    name: arm64 plugin
+  - path: arm64.zip.sha256
     name: checksum
   - path: x86.zip
     name: x86 plugin
   - path: x86.zip.sha256
+    name: checksum
+  - path: x64.zip
+    name: x64 plugin
+  - path: x64.zip.sha256
     name: checksum
