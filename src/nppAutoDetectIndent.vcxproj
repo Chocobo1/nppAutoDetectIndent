@@ -111,6 +111,7 @@
       <FloatingPointModel>Fast</FloatingPointModel>
       <EnableEnhancedInstructionSet>NoExtensions</EnableEnhancedInstructionSet>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link />
   </ItemDefinitionGroup>
@@ -122,6 +123,7 @@
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;_USRDLL;NPPAUTODETECTINDENT_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <FloatingPointModel>Fast</FloatingPointModel>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link />
   </ItemDefinitionGroup>
@@ -133,6 +135,7 @@
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;_USRDLL;NPPAUTODETECTINDENT_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <FloatingPointModel>Fast</FloatingPointModel>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link />
   </ItemDefinitionGroup>
@@ -147,6 +150,7 @@
       <AdditionalOptions>/Gw %(AdditionalOptions)</AdditionalOptions>
       <EnableEnhancedInstructionSet>NoExtensions</EnableEnhancedInstructionSet>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -164,6 +168,7 @@
       <FloatingPointModel>Fast</FloatingPointModel>
       <AdditionalOptions>/Gw %(AdditionalOptions)</AdditionalOptions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -181,6 +186,7 @@
       <FloatingPointModel>Fast</FloatingPointModel>
       <AdditionalOptions>/Gw %(AdditionalOptions)</AdditionalOptions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>

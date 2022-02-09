@@ -1,7 +1,7 @@
 /*
 *  Chocobo1/nppAutoDetectIndent
 *
-*   Copyright 2017-2018 by Mike Tzou (Chocobo1)
+*   Copyright 2017-2022 by Mike Tzou (Chocobo1)
 *     https://github.com/Chocobo1/nppAutoDetectIndent
 *
 *   Licensed under GNU General Public License 3 or later.
@@ -55,8 +55,8 @@ class MyPlugin
 	{
 		public:
 			constexpr CallFunctor(const SciFnDirect func, const sptr_t hnd)
-				: m_functor(func)
-				, m_hnd(hnd)
+				: m_functor {func}
+				, m_hnd {hnd}
 			{
 			}
 
@@ -81,7 +81,7 @@ class MyPlugin
 	class Message
 	{
 		public:
-			Message(const NppData &data);
+			explicit Message(const NppData &data);
 
 			template <typename T = void>
 			constexpr T sendNppMessage(const UINT msg, const WPARAM wParam, const LPARAM lParam) const
@@ -112,11 +112,10 @@ class MyPlugin
 		std::unordered_map<uptr_t, std::wstring> fileRenameMap;  // <buffer id, old file path>
 		nppAutoDetectIndent::NppSettings nppOriginalSettings;
 
-		static constexpr TCHAR *PLUGIN_NAME = TEXT("Auto Detect Indention");
+		static constexpr const TCHAR *PLUGIN_NAME = TEXT("Auto Detect Indention");
 
 	private:
 		MyPlugin();
-		~MyPlugin() = default;
 
 		std::unique_ptr<Message> m_message;
 

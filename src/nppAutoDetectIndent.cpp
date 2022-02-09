@@ -1,7 +1,7 @@
 /*
 *  Chocobo1/nppAutoDetectIndent
 *
-*   Copyright 2017-2018 by Mike Tzou (Chocobo1)
+*   Copyright 2017-2022 by Mike Tzou (Chocobo1)
 *     https://github.com/Chocobo1/nppAutoDetectIndent
 *
 *   Licensed under GNU General Public License 3 or later.
@@ -27,13 +27,9 @@ namespace
 {
 	const int MAX_INDENTS = (80 * 2 / 3) + 1;  // 2/3 of 80-width screen
 
-	void setupSciTextRange(Sci_TextRange &textRange, const decltype(Sci_CharacterRange::cpMin) begin, const decltype(Sci_CharacterRange::cpMax) end, char *strPtr)
-	{
-		assert(begin <= end);
-		textRange.chrg.cpMin = begin;
-		textRange.chrg.cpMax = end;
-		textRange.lpstrText = strPtr;
-	}
+	// https://sourceforge.net/p/scintilla/code/ci/ada0495ef7e80196d38e1ddf6d26d4ad75c811e1/tree/include/ScintillaTypes.h#l655
+	using SciLine = intptr_t;
+	using SciPosition = intptr_t;
 
 	bool isCommentContinuation(const LangType langId, const char c)
 	{
@@ -56,13 +52,11 @@ namespace
 	template <typename CharArray>
 	char findFirstCharAfterIndention(const CharArray &str)
 	{
-		for (const char c : str)
+		const auto iter = std::find_if(std::begin(str), std::end(str), [](const char c)
 		{
-			if ((c == '\t') || (c == ' '))
-				continue;
-			return c;
-		}
-		return -1;
+			return (c != '\t') && (c != ' ');
+		});
+		return (iter != std::end(str)) ? *iter : -1;
 	}
 
 	struct IndentionStats
@@ -82,23 +76,28 @@ namespace
 		LangType langId = L_EXTERNAL;
 		MyPlugin::instance()->message()->sendNppMessage(NPPM_GETCURRENTLANGTYPE, 0, reinterpret_cast<LPARAM>(&langId));
 
-		const int lines = std::min(sci.call<int>(SCI_GETLINECOUNT), MAX_LINES);
+		const int maxLines = std::min(static_cast<int>(sci.call<SciLine>(SCI_GETLINECOUNT)), MAX_LINES);
 		std::array<char, (MAX_INDENTS + 2)> textRangeBuffer {};  // indents + char + \0
-		for (int i = 0; i < lines; ++i)
+		for (int i = 0; i < maxLines; ++i)
 		{
 			const int indentWidth = sci.call<int>(SCI_GETLINEINDENTATION, i);
 			if (indentWidth > MAX_INDENTS)  // over MAX_INDENTS, this line must be for alignment, skip it
 				continue;
 
-			const int pos = sci.call<int>(SCI_POSITIONFROMLINE, i);
+			const SciPosition pos = sci.call<SciPosition>(SCI_POSITIONFROMLINE, i);
 
 			// avoid interference from comment documentation blocks, such as:
 			// /*
 			//  *
 			// */
-			Sci_TextRange textRange;
-			setupSciTextRange(textRange, pos, (pos + indentWidth + 1), textRangeBuffer.data());
-			sci.call<int>(SCI_GETTEXTRANGE, 0, reinterpret_cast<LPARAM>(&textRange));
+			Sci_TextRange textRange {
+				.chrg = {
+					.cpMin = pos,
+					.cpMax = (pos + indentWidth + 1)
+				},
+				.lpstrText = textRangeBuffer.data()
+			};
+			sci.call<SciPosition>(SCI_GETTEXTRANGE, 0, reinterpret_cast<LPARAM>(&textRange));
 
 			const char headChar = textRangeBuffer[0];
 			const char headCharAfterIndention = findFirstCharAfterIndention(textRangeBuffer);
@@ -132,7 +131,7 @@ namespace MenuAction
 	{
 		toggleMenuCheckbox(0, &Settings::getDisablePlugin, &Settings::setDisablePlugin);
 
-		MyPlugin *plugin = MyPlugin::instance();
+		auto *plugin = MyPlugin::instance();
 		const bool isDisable = Settings::instance()->getDisablePlugin();
 		if (isDisable)
 		{
@@ -321,7 +320,7 @@ MyPlugin::Message* MyPlugin::message() const
 
 
 MyPlugin::Message::Message(const NppData &data)
-	: m_nppData(data)
+	: m_nppData {data}
 {
 }
 
@@ -336,8 +335,8 @@ MyPlugin::CallFunctor MyPlugin::Message::getSciCallFunctor() const
 {
 	const HWND scintillaHwnd = getCurrentSciHwnd();
 
-	static const SciFnDirect func = reinterpret_cast<SciFnDirect>(::SendMessage(scintillaHwnd, SCI_GETDIRECTFUNCTION, 0, 0));
-	const sptr_t hnd = static_cast<sptr_t>(::SendMessage(scintillaHwnd, SCI_GETDIRECTPOINTER, 0, 0));
+	static const auto func = reinterpret_cast<SciFnDirect>(::SendMessage(scintillaHwnd, SCI_GETDIRECTFUNCTION, 0, 0));
+	const sptr_t hnd = ::SendMessage(scintillaHwnd, SCI_GETDIRECTPOINTER, 0, 0);
 	return {func, hnd};
 }
 
